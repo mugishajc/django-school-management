@@ -1,6 +1,8 @@
 from django.db.models import Count, Q
 from rest_framework import viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
 
 from .filters import EnrollmentFilter, GradeFilter, SchoolClassFilter, StudentFilter
 from .models import (
@@ -16,20 +18,38 @@ from .models import (
 from .permissions import (
     GradePermission,
     IsSchoolAdminOrReadOnly,
+    IsStaffMember,
     student_profile,
     teacher_profile,
     teaches,
 )
+from .reports import class_ranking, subject_statistics, term_report
 from .serializers import (
     AcademicTermSerializer,
     ClassSubjectSerializer,
     EnrollmentSerializer,
     GradeSerializer,
+    RankedStudentSerializer,
     SchoolClassSerializer,
     StudentSerializer,
     SubjectSerializer,
     TeacherSerializer,
+    TermReportSerializer,
 )
+
+
+def resolve_term(request) -> AcademicTerm:
+    """Use ?term=<id> if given, otherwise fall back to the current term."""
+    term_id = request.query_params.get("term")
+    if term_id:
+        try:
+            return AcademicTerm.objects.get(pk=int(term_id))
+        except (ValueError, AcademicTerm.DoesNotExist) as exc:
+            raise ValidationError({"term": "Unknown term."}) from exc
+    term = AcademicTerm.objects.filter(is_current=True).first()
+    if term is None:
+        raise ValidationError({"term": "No current term is set; pass ?term=<id>."})
+    return term
 
 
 class StudentScopedMixin:
@@ -76,6 +96,13 @@ class StudentViewSet(viewsets.ModelViewSet):
         # The class/year filters join through enrollments, so guard against duplicates.
         return qs.distinct()
 
+    @action(detail=True, methods=["get"])
+    def report(self, request, pk=None):
+        """Report card for one term: scores per subject, average and class position."""
+        student = self.get_object()
+        report = term_report(student, resolve_term(request))
+        return Response(TermReportSerializer(report).data)
+
 
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all()
@@ -107,6 +134,21 @@ class SchoolClassViewSet(viewsets.ModelViewSet):
                     "enrollments", filter=Q(enrollments__status=Enrollment.Status.ACTIVE)
                 )
             )
+        )
+
+    @action(detail=True, methods=["get"], permission_classes=[IsStaffMember])
+    def ranking(self, request, pk=None):
+        """Class ranking for a term plus per-subject statistics. Staff only."""
+        school_class = self.get_object()
+        term = resolve_term(request)
+        ranking = class_ranking(school_class, term)
+        return Response(
+            {
+                "school_class": {"id": school_class.pk, "label": str(school_class)},
+                "term": {"id": term.pk, "label": str(term)},
+                "ranking": RankedStudentSerializer(ranking, many=True).data,
+                "subjects": subject_statistics(school_class, term),
+            }
         )
 
 

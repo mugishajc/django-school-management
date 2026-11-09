@@ -217,3 +217,49 @@ class GradeSerializer(serializers.ModelSerializer):
                 {"enrollment": "Cannot grade a withdrawn enrollment."}
             )
         return attrs
+
+
+class SubjectLineSerializer(serializers.Serializer):
+    subject_id = serializers.IntegerField()
+    code = serializers.CharField()
+    name = serializers.CharField()
+    score = serializers.DecimalField(max_digits=5, decimal_places=2)
+    letter = serializers.CharField()
+    remarks = serializers.CharField()
+
+
+class TermReportSerializer(serializers.Serializer):
+    student = serializers.SerializerMethodField()
+    term = serializers.SerializerMethodField()
+    school_class = serializers.SerializerMethodField()
+    subjects = SubjectLineSerializer(many=True)
+    total = serializers.DecimalField(max_digits=7, decimal_places=2, allow_null=True)
+    average = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+    letter = serializers.CharField()
+    position = serializers.IntegerField(allow_null=True)
+    class_size = serializers.IntegerField()
+
+    def get_student(self, report):
+        return {
+            "id": report.student.pk,
+            "admission_number": report.student.admission_number,
+            "name": report.student.user.get_full_name(),
+        }
+
+    def get_term(self, report):
+        return {"id": report.term.pk, "label": str(report.term)}
+
+    def get_school_class(self, report):
+        if report.school_class is None:
+            return None
+        return {"id": report.school_class.pk, "label": str(report.school_class)}
+
+
+class RankedStudentSerializer(serializers.Serializer):
+    position = serializers.IntegerField(allow_null=True)
+    student_id = serializers.IntegerField()
+    admission_number = serializers.CharField()
+    name = serializers.CharField()
+    subjects_graded = serializers.IntegerField()
+    average = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+    letter = serializers.CharField()

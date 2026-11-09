@@ -123,6 +123,14 @@ class EnrollmentAdmin(admin.ModelAdmin):
 class GradeAdmin(admin.ModelAdmin):
     list_display = ("enrollment", "subject", "term", "score", "letter", "recorded_by")
     list_filter = ("term", "subject", "enrollment__school_class")
-    search_fields = ("enrollment__student__admission_number", "enrollment__student__user__last_name")
+    search_fields = (
+        "enrollment__student__admission_number",
+        "enrollment__student__user__last_name",
+    )
     autocomplete_fields = ("enrollment", "subject", "recorded_by")
-    list_select_related = ("enrollment__student__user", "enrollment__school_class", "subject", "term")
+    list_select_related = (
+        "enrollment__student__user",
+        "enrollment__school_class",
+        "subject",
+        "term",
+    )

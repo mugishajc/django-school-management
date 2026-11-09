@@ -113,7 +113,9 @@ class SchoolClass(models.Model):
         verbose_name = "class"
         verbose_name_plural = "classes"
         constraints = [
-            models.UniqueConstraint(fields=["name", "stream", "year"], name="unique_class_stream_year")
+            models.UniqueConstraint(
+                fields=["name", "stream", "year"], name="unique_class_stream_year"
+            )
         ]
 
     def __str__(self) -> str:
@@ -124,7 +126,9 @@ class SchoolClass(models.Model):
 class ClassSubject(models.Model):
     """Which teacher teaches which subject to which class."""
 
-    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE, related_name="offerings")
+    school_class = models.ForeignKey(
+        SchoolClass, on_delete=models.CASCADE, related_name="offerings"
+    )
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="offerings")
     teacher = models.ForeignKey(
         Teacher, null=True, blank=True, on_delete=models.SET_NULL, related_name="offerings"

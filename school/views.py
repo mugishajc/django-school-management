@@ -2,6 +2,7 @@ from django.db.models import Count, Q
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 
+from .filters import EnrollmentFilter, GradeFilter, SchoolClassFilter, StudentFilter
 from .models import (
     AcademicTerm,
     ClassSubject,
@@ -54,12 +55,17 @@ class TeacherViewSet(viewsets.ModelViewSet):
     queryset = Teacher.objects.select_related("user")
     serializer_class = TeacherSerializer
     permission_classes = [IsSchoolAdminOrReadOnly]
+    search_fields = ["staff_number", "user__first_name", "user__last_name", "user__email"]
+    ordering_fields = ["staff_number", "user__last_name", "hire_date"]
 
 
 class StudentViewSet(viewsets.ModelViewSet):
     queryset = Student.objects.select_related("user")
     serializer_class = StudentSerializer
     permission_classes = [IsSchoolAdminOrReadOnly]
+    filterset_class = StudentFilter
+    search_fields = ["admission_number", "user__first_name", "user__last_name", "guardian_name"]
+    ordering_fields = ["admission_number", "user__last_name", "date_of_birth"]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -67,24 +73,30 @@ class StudentViewSet(viewsets.ModelViewSet):
         if user.is_student:
             profile = student_profile(user)
             return qs.filter(pk=profile.pk) if profile else qs.none()
-        return qs
+        # The class/year filters join through enrollments, so guard against duplicates.
+        return qs.distinct()
 
 
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [IsSchoolAdminOrReadOnly]
+    search_fields = ["code", "name"]
 
 
 class AcademicTermViewSet(viewsets.ModelViewSet):
     queryset = AcademicTerm.objects.all()
     serializer_class = AcademicTermSerializer
     permission_classes = [IsSchoolAdminOrReadOnly]
+    filterset_fields = ["year", "is_current"]
 
 
 class SchoolClassViewSet(viewsets.ModelViewSet):
     serializer_class = SchoolClassSerializer
     permission_classes = [IsSchoolAdminOrReadOnly]
+    filterset_class = SchoolClassFilter
+    search_fields = ["name", "stream"]
+    ordering_fields = ["name", "year", "student_count"]
 
     def get_queryset(self):
         return (
@@ -102,18 +114,23 @@ class ClassSubjectViewSet(viewsets.ModelViewSet):
     queryset = ClassSubject.objects.select_related("subject", "teacher__user", "school_class")
     serializer_class = ClassSubjectSerializer
     permission_classes = [IsSchoolAdminOrReadOnly]
+    filterset_fields = ["school_class", "subject", "teacher"]
 
 
 class EnrollmentViewSet(StudentScopedMixin, viewsets.ModelViewSet):
     queryset = Enrollment.objects.select_related("student__user", "school_class")
     serializer_class = EnrollmentSerializer
     permission_classes = [IsSchoolAdminOrReadOnly]
+    filterset_class = EnrollmentFilter
+    search_fields = ["student__admission_number", "student__user__last_name"]
 
 
 class GradeViewSet(StudentScopedMixin, viewsets.ModelViewSet):
     queryset = Grade.objects.select_related("enrollment", "subject", "term")
     serializer_class = GradeSerializer
     permission_classes = [GradePermission]
+    filterset_class = GradeFilter
+    ordering_fields = ["score", "recorded_at"]
     student_field = "enrollment__student"
 
     def _check_teacher_can_grade(self, serializer):

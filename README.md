@@ -8,25 +8,28 @@ and class rankings. Built with Django 5 and Django REST Framework.
 
 ## Features
 
-- **People** – students and teachers are profiles linked to a login account.
+- **People**: students and teachers are profiles linked to a login account.
   One `POST` creates both the account and the profile.
-- **Academic structure** – terms, subjects, class groups per year (e.g.
+- **Academic structure**: terms, subjects, class groups per year (e.g.
   *Senior 2 A, 2026*) and which teacher teaches which subject to which class.
-- **Enrollments** – a student can hold only one active class per academic year.
-- **Grades** – one score (0–100) per student, subject and term, with letter
-  bands A–F. The API refuses grades for subjects not taught in the student's class.
-- **Term reports** – per-student report card (scores, total, average, letter,
+- **Enrollments**: a student can hold only one active class per academic year.
+- **Grades**: one score (0 to 100) per student, subject and term, with letter
+  bands A to F. The API refuses grades for subjects not taught in the student's class.
+- **Term reports**: per-student report card (scores, total, average, letter,
   position in class) and a class ranking with per-subject mean/high/low.
   Ties share a position (1, 2, 2, 4).
-- **Role-based access**
-  | Role    | Can do |
-  |---------|--------|
-  | admin   | everything |
-  | teacher | read school data, view class rankings, record/edit grades **only for subjects they teach in that class** |
-  | student | read-only; sees only their own profile, enrollments, grades and report |
-- **Admin site** – search, filters, inlines for class subjects and
+- **Role-based access**: see the table below.
+- **Admin site**: search, filters, inlines for class subjects and
   enrollments, bulk actions (withdraw enrollments, deactivate students, set current term).
 - Filtering, search, ordering and page-number pagination on every list endpoint.
+
+### Roles
+
+| Role    | Can do |
+|---------|--------|
+| admin   | everything |
+| teacher | read school data, view class rankings, record/edit grades only for subjects they teach in that class |
+| student | read-only; sees only their own profile, enrollments, grades and report |
 
 ## Stack
 
@@ -142,4 +145,4 @@ tests/
 
 ## License
 
-MIT – see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
